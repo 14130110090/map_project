@@ -1,0 +1,29 @@
+page-baidu-map {
+    #map_container{
+		width: 100%;
+		height: 100%;
+	}
+	#btn-location{
+		position: relative;		
+		top: 10px;
+		left: 0;
+		z-index: 999;		
+	}
+	.btn_loaction{
+		padding-right:10px;
+	}
+	
+	// 删除百度地图版权信息
+	// .anchorBL{
+	// 	display:none;
+	// }
+	// .BMap_cpyCtrl
+    // {
+    //   display:none;
+	// }
+	
+	.ion-ios-arrow-back-outline:before{
+        zoom:1.8;
+        color: rgb(93, 93, 230);
+    }
+}

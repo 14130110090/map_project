@@ -1,0 +1,7 @@
+{
+  "name": "MapProject",
+  "integrations": {
+    "cordova": {}
+  },
+  "type": "ionic-angular"
+}

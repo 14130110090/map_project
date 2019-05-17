@@ -1,0 +1,22 @@
+
+<!-- <ion-header class="dark_mapinput">
+
+  <div  style="position: relative;width:100%;height:40px;background:#ECECEC;">
+    <div (click)="goBack()" style="height:40px;position: absolute;left:0;z-index:2;width:20%;display: flex;justify-content:center;align-items: center;">
+      <ion-icon  name="ios-arrow-back-outline" style="padding: 0 3%;"></ion-icon>
+      <div  style="font-size:16px;color:rgb(93, 93, 230)">返回</div>
+    </div>  
+    
+      <div style="height:40px;line-height: 40px;position:absolute;text-align:center;font-size:18px;font-weight: 600;left:0;width:100%;">设计师/环保项目位置</div>
+      <div *ngIf="page_type==1" (click)="goBack()" style="height:40px;position: absolute;right:0;z-index:2;width:20%;display: flex;justify-content:center;align-items: center;">
+        <div style="font-size:16px;color:rgb(93, 93, 230)">确定</div>
+      </div>  
+  </div>
+  <input #mInput (click)="showResults()" type="text" placeholder="请输入地点" id="suggestId" size="20" (input)="valueChange(mInput.value)" style="width:90%;padding:8px;border-radius: 5px 5px 0 0;font-size:16px;margin:10px 5% 10px 5%;border:1px solid #C0C0C0;" />
+</ion-header> -->
+
+
+<ion-content>
+  <div #map id="map_container"></div>
+  <div id="searchResultPanel" style="border:1px solid #C0C0C0;width:150px;height:auto; display:none;"></div>  
+</ion-content>
