@@ -11,13 +11,14 @@ declare var BMapLib;
 declare var BMAP_ANCHOR_TOP_RIGHT;
 declare var BMAP_STATUS_SUCCESS;
 declare var BMAP_ANIMATION_BOUNCE;
-
+declare var window:any;
 @Component({
   selector: 'page-baidu-map',
   templateUrl: 'baidu-map.html',
 })
 export class BaiduMapPage {
-  APP_SERVE_URL='http://47.93.237.6:8080/zixun/getData.jsp';
+  webSocket: WebSocket;
+  APP_SERVE_URL = 'http://47.93.237.6:8080/zixun/getData.jsp';
   @ViewChild('map') map_container: ElementRef;
   address = "";
   map: any;//地图对象
@@ -29,7 +30,10 @@ export class BaiduMapPage {
   demands: any = [];
   designersMarkers = [];   //存放由designers的坐标生成的marker
   demandsMarkers = [];
-  autoComplete=null;    //自动下拉列表对象
+  autoComplete = null;    //自动下拉列表对象
+  receivedData=null;   //从socket收到的数据
+  marker2;
+  marker3;
   constructor(
     public httpService: HttpServiceProvider,
     public viewCtrl: ViewController,
@@ -42,21 +46,11 @@ export class BaiduMapPage {
     public navParams: NavParams,
     public atrCtrl: AlertController,
   ) {
-  
-  }
 
-  goBack() {
-    //以输入框中的值作为返回值，因为用户可能手动更改输入框中的值
-    this.viewCtrl.dismiss({ lat: this.lat, lon: this.lon, address: this.address });
-  }
-
-  valueChange(value){
-    this.address=value;
   }
 
   ionViewDidLoad() {
-    if (this.map) return;//后面不要刷新页面
-    //this.nativeService.showLoading();
+    if (this.map) return;
 
     this.map = new BMap.Map(               //创建地图实例
       this.map_container.nativeElement,
@@ -67,10 +61,32 @@ export class BaiduMapPage {
       }
     );
 
-    let point = new BMap.Point(114.38, 30.52);
+    let point = new BMap.Point(114.313473, 30.593766);
     // //设置初始显示中心和地图级别，最小为1，最大是17级，地图级别越大放大程度越大
     // //只有在地图初始化后才可以进行其他操作
-    this.map.centerAndZoom(point, 15);
+    this.map.centerAndZoom(point, 8);
+    //添加合肥图标
+    let hefeiPosition = new BMap.Point(117.237493, 31.825182);
+    let mIcon1 = new BMap.Icon("assets/imgs/list_task.png", new BMap.Size(40, 40), { anchor: new BMap.Size(15, 32) });
+    let marker1 = new BMap.Marker(hefeiPosition, { icon: mIcon1 });
+    this.map.addOverlay(marker1);
+    this.addClickHandlerforDemand(this, 2, marker1);
+
+    //添加武汉图标
+    let showDesigner = true;  //是否显示设计师图标
+    let mIcon2 = new BMap.Icon("assets/imgs/designer.png", new BMap.Size(40, 40), { anchor: new BMap.Size(15, 32) });
+    this.marker2 = new BMap.Marker(point, { icon: mIcon2 });
+    this.map.addOverlay(this.marker2);
+    this.addClickHandlerforDesigner(this, 1, this.marker2);
+
+    let mIcon3 = new BMap.Icon("assets/imgs/list_task.png", new BMap.Size(40, 40), { anchor: new BMap.Size(13, 27) });
+    this.marker3 = new BMap.Marker(point, { icon: mIcon3 });
+    this.map.addOverlay(this.marker3);
+    this.marker3.hide();
+    this.addClickHandlerforDemand(this, 1, this.marker3);
+
+    //连接到服务器
+    this.connectToServer();
 
     //如果来自发布任务页面就添加点击地图事件监听，使得可以更改位置
     // if (this.page_type == 1)
@@ -87,22 +103,86 @@ export class BaiduMapPage {
     //设置地图样式
     // this.map.setMapStyle({ style: "midnight" });
     //仅加载当前视野的markers
-    this.map.addEventListener("dragend", () => { //可以进行markers的动态加载
-      // this.showAndHideMarker(this.map);
-        let point = this.map.getCenter();
-        console.log(point.lng + " " + point.lat);
-        this.getData(point.lng, point.lat);
-    });
+    // this.map.addEventListener("dragend", () => { //可以进行markers的动态加载
+    //   // this.showAndHideMarker(this.map);
+    //     let point = this.map.getCenter();
+    //     console.log(point.lng + " " + point.lat);
+    //     this.getData(point.lng, point.lat);
+    // });
 
-    this.map.addEventListener("zoomend", () => { //可以进行markers的动态加载
-      // this.showAndHideMarker(this.map);
-        let point = this.map.getCenter();
-        this.getData(point.lng, point.lat);
-    });
-    
+    // this.map.addEventListener("zoomend", () => { //可以进行markers的动态加载
+    //   // this.showAndHideMarker(this.map);
+    //     let point = this.map.getCenter();
+    //     this.getData(point.lng, point.lat);
+    // });
+
     //如果没有传入地址就使用当前位置
-      this.moveToCurrentPosition();
-      this.getData(this.lon, this.lat);
+    // this.moveToCurrentPosition();
+    // this.getData(this.lon, this.lat);
+  }
+
+  connectToServer() {
+    //ws://106.13.71.114:9999
+    //http://106.13.71.114:9999
+    // this.webSocket = new WebSocket("ws://localhost:6066");
+
+    //     this.webSocket.onmessage = (data) => {
+    //       console.log(data);
+
+    //     }
+    //     this.webSocket.onerror = (data) => {
+
+    //       console.log(data)
+    //     }
+    //     this.webSocket.onclose = (data) => {
+
+    //       console.log(data)
+    //     }
+    // console.log("连接状态"+this.webSocket.CONNECTING);
+
+    //     this.webSocket.onopen = () => {
+    //       console.log("123");
+    //       this.webSocket.send("ABC");
+    //     }
+
+    console.log("开始连接");
+    var socket = new window.Socket();
+    socket.open(
+      "106.13.71.114",
+      9999,
+      ()=>{
+        console.log("连接成功");
+        var dataString = "ABC";
+        var data = new Uint8Array(dataString.length);
+        for (var i = 0; i < data.length; i++) {
+          data[i] = dataString.charCodeAt(i);
+        }
+        socket.write(data);
+      },
+      function (errorMessage) {
+        console.log("连接失败");
+      });
+
+  
+    socket.onData = (data)=>{
+      console.log("获取数据了"+data);
+      //将ASCII码值转换为对应的字符
+      this.receivedData=String.fromCharCode(data);
+      if (this.receivedData == '1') {
+        this.marker2.hide();
+        this.marker3.show();
+      } else {
+        this.marker3.hide();
+        this.marker2.show();
+      }
+    };
+    socket.onError = function (errorMessage) {
+      console.log("出现错误");
+    };
+    socket.onClose = function (hasError) {
+      console.log(hasError);
+    };
+
   }
 
 
@@ -111,15 +191,14 @@ export class BaiduMapPage {
   }
 
   getData(lon, lat) {
-    //此处是因为api中的经纬度搞反了，按照api给的来写吧
     let param = { "lat": lat, "lon": lon };
     this.httpService.get(this.APP_SERVE_URL, "gr_userGeolocation", param).subscribe((res) => {
       if (res['code'] == 0) {
         // [{"user_id":4,"lat":114.275001500000002,"lon":30.5851001700000005}]
         for (let marker of this.designersMarkers) {
-            this.map.removeOverlay(marker);
+          this.map.removeOverlay(marker);
         }
-        this.designersMarkers=[];
+        this.designersMarkers = [];
         this.designers = res['data'];
         this.showOnMap(this.designers, 2);
       }
@@ -130,8 +209,8 @@ export class BaiduMapPage {
         // [{"task_id":4,"lat":114.84744385603139,"lon":31.2500090815671818}]
         for (let marker of this.demandsMarkers) {
           this.map.removeOverlay(marker);
-      }
-      this.demandsMarkers=[];
+        }
+        this.demandsMarkers = [];
         this.demands = res['data'];
         this.showOnMap(this.demands, 1);
       }
@@ -175,13 +254,13 @@ export class BaiduMapPage {
 
   addClickHandlerforDemand(p_this, id, marker) {
     marker.addEventListener("click", function (e) {
-      p_this.navCtrl.push('DetailPage', { type:1,id: id });
+      p_this.navCtrl.push('DetailPage', { type: 1, id: id });
     }
     );
   }
   addClickHandlerforDesigner(p_this, id, marker) {
     marker.addEventListener("click", function (e) {
-      p_this.navCtrl.push('DetailPage', { type:0,id: id });
+      p_this.navCtrl.push('DetailPage', { type: 0, id: id });
     }
     );
   }
@@ -305,9 +384,9 @@ export class BaiduMapPage {
 
   setInputSearchListener() {
     //建立一个自动完成的对象
-    this.autoComplete= new BMap.Autocomplete({ "input": "suggestId", "location": this.map });
-    if(this.address!="")
-    this.autoComplete.setInputValue(this.address);
+    this.autoComplete = new BMap.Autocomplete({ "input": "suggestId", "location": this.map });
+    if (this.address != "")
+      this.autoComplete.setInputValue(this.address);
     //注意如果不用箭头函数里面不能用this来指向本类的变量
     this.autoComplete.addEventListener("onhighlight", (e) => {  //鼠标放在下拉列表上的事件
       var str = "";
@@ -335,16 +414,16 @@ export class BaiduMapPage {
       var _value = e.item.value;
       myValue = _value.province + _value.city + _value.district + _value.street + _value.business;
       document.getElementById("searchResultPanel").innerHTML = "onconfirm<br />index = " + e.item.index + "<br />myValue = " + myValue;
-      this.address=myValue;
+      this.address = myValue;
       this.setPlace(myValue);
     });
   }
 
   //显示提示列表
-  showResults(){
+  showResults() {
     console.log("获取焦点了");
-    if(this.autoComplete!=null)
-    this.autoComplete.show();
+    if (this.autoComplete != null)
+      this.autoComplete.show();
   }
 
 }

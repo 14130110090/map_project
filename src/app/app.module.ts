@@ -28,6 +28,7 @@ import { HttpClientModule } from '@angular/common/http';
     BaiduMapPage
   ],
   providers: [
+    
     ToastController,
     StatusBar,
     SplashScreen,
